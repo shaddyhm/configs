@@ -1,0 +1,5 @@
+description: someotherdescription
+version: ${{ version }}
+prop5:
+  - ${{ somelist.0 }}
+  - ${{ somelist.1 }}

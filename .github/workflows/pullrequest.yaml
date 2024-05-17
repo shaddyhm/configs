@@ -1,0 +1,25 @@
+name: PullRequest
+on:
+  pull_request:
+    branches:
+      - main
+jobs:
+  ci_build_test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [18]
+    name: Node ${{ matrix.node }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Install dependencies
+        run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Test
+        run: npm test

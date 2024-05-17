@@ -1,0 +1,7 @@
+name: somename
+description: somedescription
+prop1:
+  prop2:
+    prop3: value3
+    prop4: ${{ someobject.prop4 }}
+object: { 'name': '${{ author.name }}' }
