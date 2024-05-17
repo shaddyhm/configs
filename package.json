@@ -1,6 +1,6 @@
 {
   "name": "@shaddyhm/configs",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A simple application configuration library",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -55,8 +55,5 @@
     "tabWidth": 2,
     "singleQuote": true,
     "trailingComma": "all"
-  },
-  "publishConfig": {
-    "@shaddyhm:registry": "https://npm.pkg.github.com"
   }
 }

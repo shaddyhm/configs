@@ -20,7 +20,11 @@ export type ConfigsOptions = {
   configsResolver: (env: string) => string[];
 };
 
-export class Configs {
+export interface IConfigs {
+  get: <T>(key?: string) => Promise<T>;
+}
+
+export class Configs implements IConfigs {
   private static defaultOptions: ConfigsOptions = {
     fetchData: () => Promise.resolve({}),
     pathDelimiter: '.',
