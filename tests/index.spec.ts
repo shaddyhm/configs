@@ -36,6 +36,20 @@ describe('Test empty options', () => {
 });
 
 describe('Test unhappy paths', () => {
+  it('should throw if files are not provided', () => {
+    assert.throws(() => {
+      Configs.create((opt) => {
+        opt.resolvers = [
+          {
+            directory: '/tests/configs',
+            env: 'development',
+            files: [],
+          },
+        ];
+      });
+    }, new FileError('No config files provided for development env'));
+  });
+
   it('should throw if no resolver is found', () => {
     assert.throws(() => {
       Configs.create();
