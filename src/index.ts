@@ -38,7 +38,7 @@ export class Configs implements IConfigs {
 
   private resolver!: ConfigsResolver;
 
-  private value!: { [key: string]: any };
+  private value?: { [key: string]: any };
 
   private valueSetTime: number = 0;
 
