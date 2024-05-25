@@ -5,10 +5,9 @@ import * as path from 'path';
 import * as util from 'util';
 import * as YAML from 'yaml';
 
-import { ResolverError } from './errors';
+import { ExtensionError, FilesError, ResolverError } from './errors';
 import { DirectoryError } from './errors/directory.error';
 import { FileError } from './errors/file.error';
-import { ParserError } from './errors/parser.error';
 
 const readFileAsync = util.promisify(fs.readFile);
 
@@ -73,7 +72,7 @@ export class Configs implements IConfigs {
       );
 
     if (!resolver.files || !resolver.files.length)
-      throw new FileError(`No config files provided for ${resolver.env} env`);
+      throw new FilesError(`No config files provided for ${resolver.env} env`);
 
     // validate resolver files and extensions
     resolver.files.forEach((file) => {
@@ -88,7 +87,7 @@ export class Configs implements IConfigs {
       const ext = path.extname(file);
       const isExtensionSupported = ['.yaml', '.yml'].includes(ext);
       if (!isExtensionSupported)
-        throw new ParserError(
+        throw new ExtensionError(
           `Unsupported file extension ${ext}. Only .yaml and .yml are supported.`,
         );
     });

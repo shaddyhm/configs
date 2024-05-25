@@ -3,8 +3,9 @@ import * as assert from 'assert';
 import { Configs } from '../src/';
 import {
   DirectoryError,
+  ExtensionError,
   FileError,
-  ParserError,
+  FilesError,
   ResolverError,
 } from '../src/errors';
 
@@ -47,7 +48,7 @@ describe('Test unhappy paths', () => {
           },
         ];
       });
-    }, new FileError('No config files provided for development env'));
+    }, new FilesError('No config files provided for development env'));
   });
 
   it('should throw if no resolver is found', () => {
@@ -95,7 +96,7 @@ describe('Test unhappy paths', () => {
           },
         ];
       });
-    }, new ParserError('Unsupported file extension .json. Only .yaml and .yml are supported.'));
+    }, new ExtensionError('Unsupported file extension .json. Only .yaml and .yml are supported.'));
   });
 });
 

@@ -1,6 +1,6 @@
 import { PackageError } from './package.error';
 
-export class ParserError extends PackageError {
+export class ExtensionError extends PackageError {
   constructor(message: string) {
     super(message);
   }
