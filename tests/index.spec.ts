@@ -1,18 +1,27 @@
 import * as assert from 'assert';
 
 import { Configs } from '../src/';
-import { DirectoryError, FileError, ParserError } from '../src/errors';
+import {
+  DirectoryError,
+  FileError,
+  ParserError,
+  ResolverError,
+} from '../src/errors';
 
 describe('Test empty options', () => {
   let config: Configs;
 
   beforeEach(() => {
     config = Configs.create((opt) => {
-      opt.fetchData = null as any;
-      opt.pathDelimiter = null as any;
-      opt.configsDirectory = '/tests/configs';
-      opt.cacheExpiryTime = null as any;
-      opt.configsResolver = () => ['config.development.yaml'];
+      opt.cacheExpiryTime = 0;
+      opt.pathDelimiter = '';
+      opt.resolvers = [
+        {
+          directory: '/tests/configs',
+          env: 'development',
+          files: ['config.development.yaml'],
+        },
+      ];
     });
   });
 
@@ -27,10 +36,22 @@ describe('Test empty options', () => {
 });
 
 describe('Test unhappy paths', () => {
+  it('should throw if no resolver is found', () => {
+    assert.throws(() => {
+      Configs.create();
+    }, new ResolverError('Resolver not found'));
+  });
+
   it('should throw an error if the directory does not exist', () => {
     assert.throws(() => {
       Configs.create((opt) => {
-        opt.configsDirectory = '/tests/configsss';
+        opt.resolvers = [
+          {
+            directory: '/tests/configsss',
+            env: 'development',
+            files: ['config.development.yaml'],
+          },
+        ];
       });
     }, new DirectoryError('Directory /tests/configsss does not exist'));
   });
@@ -38,8 +59,13 @@ describe('Test unhappy paths', () => {
   it('should throw an error if the config file does not exist', () => {
     assert.throws(() => {
       Configs.create((opt) => {
-        opt.configsDirectory = '/tests/configs';
-        opt.configsResolver = () => ['config.development.json'];
+        opt.resolvers = [
+          {
+            directory: '/tests/configs',
+            env: 'development',
+            files: ['config.development.json'],
+          },
+        ];
       });
     }, new FileError('Config file config.development.json does not exist'));
   });
@@ -47,8 +73,13 @@ describe('Test unhappy paths', () => {
   it('should throw an error if the parser is not supported', () => {
     assert.throws(() => {
       Configs.create((opt) => {
-        opt.configsDirectory = '/tests/configs';
-        opt.configsResolver = () => ['config.invalid.json'];
+        opt.resolvers = [
+          {
+            directory: '/tests/configs',
+            env: 'development',
+            files: ['config.invalid.json'],
+          },
+        ];
       });
     }, new ParserError('Unsupported file extension .json. Only .yaml and .yml are supported.'));
   });
@@ -59,23 +90,25 @@ describe('Test happy paths', () => {
 
   beforeEach(() => {
     config = Configs.create((opt) => {
-      opt.configsDirectory = '/tests/configs';
-      opt.configsResolver = (env: string) => [
-        'common.yaml',
-        `config.${env}.yaml`,
+      opt.resolvers = [
+        {
+          directory: '/tests/configs',
+          env: 'development',
+          files: ['common.yaml', 'config.development.yaml'],
+          fetchData: () =>
+            Promise.resolve({
+              version: 'v1.2.3',
+              someobject: {
+                prop4: 'value4',
+              },
+              somelist: ['value5', 'value6'],
+              author: {
+                name: 'Shaddy Mansour',
+              },
+            }),
+        },
       ];
       opt.pathDelimiter = '/';
-      opt.fetchData = () =>
-        Promise.resolve({
-          version: 'v1.2.3',
-          someobject: {
-            prop4: 'value4',
-          },
-          somelist: ['value5', 'value6'],
-          author: {
-            name: 'Shaddy Mansour',
-          },
-        });
     });
   });
 

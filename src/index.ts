@@ -5,19 +5,25 @@ import * as path from 'path';
 import * as util from 'util';
 import * as YAML from 'yaml';
 
+import { ResolverError } from './errors';
 import { DirectoryError } from './errors/directory.error';
 import { FileError } from './errors/file.error';
 import { ParserError } from './errors/parser.error';
 
 const readFileAsync = util.promisify(fs.readFile);
 
+export type ConfigsResolver = {
+  directory: string;
+  env: string;
+  fetchData?: () => Promise<{ [key: string]: any }>;
+  files: string[];
+};
+
 export type ConfigsOptions = {
-  fetchData: () => Promise<{ [key: string]: any }>;
-  pathDelimiter: string;
-  configsDirectory: string;
   // in milliseconds
   cacheExpiryTime: number;
-  configsResolver: (env: string) => string[];
+  pathDelimiter: string;
+  resolvers: ConfigsResolver[];
 };
 
 export interface IConfigs {
@@ -26,12 +32,12 @@ export interface IConfigs {
 
 export class Configs implements IConfigs {
   private static defaultOptions: ConfigsOptions = {
-    fetchData: () => Promise.resolve({}),
-    pathDelimiter: '.',
-    configsDirectory: 'configs',
     cacheExpiryTime: 60 * 1000,
-    configsResolver: (env: string) => [`config.${env}.yaml`],
+    pathDelimiter: '.',
+    resolvers: [],
   };
+
+  private resolver!: ConfigsResolver;
 
   private value!: { [key: string]: any };
 
@@ -46,38 +52,39 @@ export class Configs implements IConfigs {
     fn(opt);
 
     // apply default options if options not provided
-    if (!opt.fetchData) opt.fetchData = Configs.defaultOptions.fetchData;
-    if (!opt.pathDelimiter)
-      opt.pathDelimiter = Configs.defaultOptions.pathDelimiter;
-    if (!opt.configsDirectory)
-      opt.configsDirectory = Configs.defaultOptions.configsDirectory;
     if (!opt.cacheExpiryTime)
       opt.cacheExpiryTime = Configs.defaultOptions.cacheExpiryTime;
-    if (!opt.configsResolver)
-      opt.configsResolver = Configs.defaultOptions.configsResolver;
+    if (!opt.pathDelimiter)
+      opt.pathDelimiter = Configs.defaultOptions.pathDelimiter;
+    if (!opt.resolvers) opt.resolvers = Configs.defaultOptions.resolvers;
+
+    const resolver = opt.resolvers.find(
+      (resolver) => resolver.env === (process.env.NODE_ENV || 'development'),
+    );
+    if (!resolver) throw new ResolverError('Resolver not found');
 
     // validate directory
     const directoryExists = fs.existsSync(
-      path.join(rootPath, opt.configsDirectory),
+      path.join(rootPath, resolver.directory),
     );
     if (!directoryExists)
       throw new DirectoryError(
-        `Directory ${opt.configsDirectory} does not exist`,
+        `Directory ${resolver.directory} does not exist`,
       );
 
-    // validate resolver and extensions
-    const resolvedFiles = opt.configsResolver(
-      process.env.NODE_ENV || 'development',
-    );
-    resolvedFiles.forEach((file) => {
-      // validate file
+    if (!resolver.files || !resolver.files.length)
+      throw new FileError(`No config files provided for ${resolver.env} env`);
+
+    // validate resolver files and extensions
+    resolver.files.forEach((file) => {
+      // validate file existence
       const configFileExists = fs.existsSync(
-        path.join(rootPath, opt.configsDirectory, file),
+        path.join(rootPath, resolver.directory, file),
       );
       if (!configFileExists)
         throw new FileError(`Config file ${file} does not exist`);
 
-      // validate extension
+      // validate yml extension
       const ext = path.extname(file);
       const isExtensionSupported = ['.yaml', '.yml'].includes(ext);
       if (!isExtensionSupported)
@@ -86,24 +93,23 @@ export class Configs implements IConfigs {
         );
     });
 
-    return new Configs(opt);
+    const configs = new Configs(opt);
+    configs.resolver = resolver;
+    return configs;
   };
 
   public get = async <T>(key: string = ''): Promise<T> => {
     const now = Date.now();
     const expiryTime = this.valueSetTime + this.options.cacheExpiryTime;
     if (!this.value || now > expiryTime) {
-      const data = await this.options.fetchData();
+      const data = this.resolver.fetchData
+        ? await this.resolver.fetchData()
+        : {};
       this.valueSetTime = now;
-      this.value = await this.options
-        .configsResolver(process.env.NODE_ENV || 'development')
-        .reduce(async (valuePromise, file) => {
+      this.value = await this.resolver.files.reduce(
+        async (valuePromise, file) => {
           const value = await valuePromise;
-          const filePath = path.join(
-            rootPath,
-            this.options.configsDirectory,
-            file,
-          );
+          const filePath = path.join(rootPath, this.resolver.directory, file);
           let content = await readFileAsync(filePath, { encoding: 'utf-8' });
           content = Mustache.render(
             content,
@@ -115,7 +121,9 @@ export class Configs implements IConfigs {
             },
           );
           return { ...value, ...YAML.parse(content) };
-        }, Promise.resolve({}));
+        },
+        Promise.resolve({}),
+      );
     }
 
     if (!key) return this.value as T;
