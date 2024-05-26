@@ -5,9 +5,13 @@ import * as path from 'path';
 import * as util from 'util';
 import * as YAML from 'yaml';
 
-import { ExtensionError, FilesError, ResolverError } from './errors';
-import { DirectoryError } from './errors/directory.error';
-import { FileError } from './errors/file.error';
+import {
+  DirectoryError,
+  ExtensionError,
+  FileError,
+  FilesError,
+  ResolverError,
+} from './errors';
 
 const readFileAsync = util.promisify(fs.readFile);
 
